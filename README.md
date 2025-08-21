@@ -4,6 +4,12 @@
 
 ![](screenshot.png)
 
+---
+
+🚧 There is a pre-release version of this generator, you can install it by running `npm install --global generator-webapp@next`. Help us make it stable by reporting bugs! 🚧
+
+---
+
 
 ## Features
 
@@ -16,7 +22,6 @@ Please see our [gulpfile](app/templates/gulpfile.js) for up to date information 
 * Automagically lint your scripts
 * Map compiled CSS to source stylesheets with source maps
 * Awesome image optimization
-* Automagically wire-up dependencies installed with [Bower](http://bower.io)
 
 *For more information on what this generator can do for you, take a look at the [gulp plugins](app/templates/_package.json) used in our `package.json`.*
 
@@ -30,20 +35,22 @@ If your favorite feature is missing and you really need Ruby Sass, you can alway
 
 ## Getting Started
 
-- Install: `npm install --global yo gulp-cli bower generator-webapp`
+- Install: `npm install --global yo gulp-cli generator-webapp`
 - Run `yo webapp` to scaffold your webapp
-- Run `gulp serve` to preview and watch for changes
-- Run `bower install --save <package>` to install frontend dependencies
-- Run `gulp serve:test` to run the tests in the browser
-- Run `gulp` to build your webapp for production
-- Run `gulp serve:dist` to preview the production build
+- Run `npm start` to preview and watch for changes
+- Run `npm start -- --port=8080` to preview and watch for changes in port `8080`
+- Run `npm install --save <package>` to install dependencies, frontend included
+- Run `npm run  serve:test` to run the tests in the browser
+- Run `npm run  serve:test -- --port=8085` to run the tests in the browser in port `8085`
+- Run `npm run build` to build your webapp for production
+- Run `npm run serve:dist` to preview the production build
+- Run `npm run serve:dist -- --port=5000` to preview the production build in port `5000`
 
 
 ## Docs
 
 * [getting started](docs/README.md) with this generator
 * [recipes](docs/recipes/README.md) for integrating other popular technologies like CoffeeScript
-* [details](docs/bower.md) about our Bower setup
 * [contribution](contributing.md) docs and [FAQ](docs/faq.md), good to check before posting an issue
 
 
@@ -54,11 +61,9 @@ If your favorite feature is missing and you really need Ruby Sass, you can alway
 - `--skip-install-message`
   Skips the the message displayed after scaffolding has finished and before the dependencies are being installed.
 - `--skip-install`
-  Skips the automatic execution of `bower` and `npm` after scaffolding has finished.
+  Doesn't automatically install dependencies after scaffolding has finished.
 - `--test-framework=<framework>`
   Either `mocha` or `jasmine`. Defaults to `mocha`.
-- `--no-babel`
-  Scaffolds without [Babel](http://babeljs.io) support. This only applies to `app/scripts`, you can still write ES2015 in the gulpfile, depending on what your version of Node [supports](https://kangax.github.io/compat-table/es6/).
 
 
 ## Contribute

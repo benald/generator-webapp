@@ -34,27 +34,43 @@ $ npm install --save-dev gulp-pug
 Add this task to your `gulpfile.js`, it will compile `.pug` files to `.html` files in `.tmp`:
 
 ```js
-gulp.task('views', () => {
-  return gulp.src('app/*.pug')
+function views() {
+  return src('app/*.pug')
     .pipe($.plumber())
     .pipe($.pug({pretty: true}))
-    .pipe(gulp.dest('.tmp'))
-    .pipe(reload({stream: true}));
-});
+    .pipe(dest('.tmp'))
+    .pipe(server.reload({stream: true}));
+}
 ```
 
-We are passing `pretty: true` as an option to get a nice HTML output, otherwise Pug would output the HTML on a single line, which would break our comment blocks for wiredep and useref.
+We are passing `pretty: true` as an option to get a nice HTML output, otherwise Pug would output the HTML on a single line, which would break our comment blocks for useref.
 
-### 3. Add `views` as a dependency of both `html` and `serve`
+### 3. Add `views` task to `server` and `build` process
 
 ```js
-gulp.task('html', ['views', 'styles', 'scripts'], () => {
+if (isDev) {
+  serve = series(clean, parallel(views, styles, scripts, fonts), startAppServer);
+} else if (isTest) {
+  serve = series(clean, parallel(views, scripts), startTestServer);
+} else if (isProd) {
+  serve = series(build, startDistServer);
+}
     ...
 ```
 
 ```js
-gulp.task('serve', ['views', 'styles', 'scripts', 'fonts'], () => {
-    ...
+const build = series(
+  clean,
+  parallel(
+    lint,
+    series(parallel(views, styles, scripts), html),
+    images,
+    fonts,
+    extras
+  ),
+  measureSize
+);
+  ...
 ```
 
 ### 4. Update other tasks
@@ -64,15 +80,11 @@ gulp.task('serve', ['views', 'styles', 'scripts', 'fonts'], () => {
 We want to parse the compiled HTML:
 
 ```diff
- gulp.task('html', ['views', 'styles'], () => {
--  return gulp.src('app/*.html')
-+  return gulp.src(['app/*.html', '.tmp/*.html'])
-     .pipe($.useref({searchPath: ['.tmp', 'app', '.']}))
-     .pipe($.if('*.js', $.uglify()))
-     .pipe($.if('*.css', $.cssnano()))
-     .pipe($.if('*.html', $.htmlmin({collapseWhitespace: true})))
-     .pipe(gulp.dest('dist'));
-});
+function html() {
+-  return src(['app/*.html'])
++  return src(['app/*.html', '.tmp/*.html'])
+    .pipe($.useref({searchPath: ['.tmp', 'app', '.']}))
+  ...
 ```
 
 #### `extras`
@@ -80,77 +92,34 @@ We want to parse the compiled HTML:
 We don't want to copy over `.pug` files in the build process:
 
 ```diff
- gulp.task('extras', () => {
-   return gulp.src([
-     'app/*.*',
--    '!app/*.html'
+function extras() {
+  return src([
+    'app/*',
+-    '!app/*.html',
 +    '!app/*.html',
 +    '!app/*.pug'
-   ], {
-     dot: true
-   }).pipe(gulp.dest('dist'));
- });
+  ], {
+    dot: true
+  }).pipe(dest('dist'));
+};
 ```
 
-#### `wiredep`
-
-Wiredep supports Pug:
-
-```diff
- gulp.task('wiredep', () => {
-   gulp.src('app/styles/*.scss')
-     .pipe(wiredep({
-       ignorePath: /^(\.\.\/)+/
-     }))
-     .pipe(gulp.dest('app/styles'));
-
--  gulp.src('app/*.html')
-+  gulp.src('app/layouts/*.pug')
-     .pipe(wiredep({
-       exclude: ['bootstrap-sass'],
--      ignorePath: /^(\.\.\/)*\.\./
-       ignorePath: /^(\.\.\/)*\.\./,
-       fileTypes: {
-         pug: {
-           block: /(([ \t]*)\/\/-?\s*bower:*(\S*))(\n|\r|.)*?(\/\/-?\s*endbower)/gi,
-           detect: {
-             js: /script\(.*src=['"]([^'"]+)/gi,
-             css: /link\(.*href=['"]([^'"]+)/gi
-           },
-           replace: {
-             js: 'script(src=\'{{filePath}}\')',
-             css: 'link(rel=\'stylesheet\', href=\'{{filePath}}\')'
-           }
-         }
-       }
-     }))
--    .pipe(gulp.dest('app'));
-+    .pipe(gulp.dest('app/layouts'));
- });
-```
-
-Assuming your wiredep comment blocks are in the layouts.
 
 #### `serve`
 
 Recompile Pug templates on each change and reload the browser after an HTML file is compiled:
 
 ```diff
- gulp.task('serve', () => {
--   runSequence(['clean', 'wiredep'], ['styles', 'scripts', fonts'], () => {
-+   runSequence(['clean', 'wiredep'], ['views', 'styles', 'scripts', 'fonts'], () => {
-   ...
-   gulp.watch([
-     'app/*.html',
-     'app/images/**/*',
-     '.tmp/fonts/**/*'
-   ]).on('change', reload);
+ watch([
+    'app/*.html',
+    'app/images/**/*',
+    '.tmp/fonts/**/*'
+  ]).on('change', server.reload);
 
-+  gulp.watch('app/**/*.pug', ['views']);
-   gulp.watch('app/styles/**/*.scss', ['styles']);
-   gulp.watch('app/scripts/**/*.js', ['scripts']);
-   gulp.watch('app/fonts/**/*', ['fonts']);
-   gulp.watch('bower.json', ['wiredep', 'fonts']);
++ watch('app/**/*.pug', views);
+  watch('app/styles/**/*.scss', styles);
+  watch('app/scripts/**/*.js', scripts);
+  watch('app/fonts/**/*', fonts);
 });
 ```
 
@@ -170,29 +139,25 @@ html.no-js(lang='')
     title webapp
     link(rel='apple-touch-icon', href='apple-touch-icon.png')
     // Place favicon.ico in the root directory
-
     // build:css styles/vendor.css
-    // bower:css
-    // endbower
+    <link rel="stylesheet" href="/node_modules/bootstrap/dist/css/bootstrap.min.css" type="text/css" />
     // endbuild
-
     // build:css styles/main.css
     link(rel='stylesheet', href='styles/main.css')
     // endbuild
-
     // build:js scripts/vendor/modernizr.js
-    script(src='/bower_components/modernizr/modernizr.js')
+    script(src='scripts/modernizr.js')
     // endbuild
   body
-    <!--[if lt IE 10]>
+    <!--[if IE]>
       p.browserupgrade You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.
     <![endif]-->
     .container
       .header
-        ul.nav.nav-pills.pull-right
-          li.active: a(href='#') Home
-          li: a(href='#') About
-          li: a(href='#') Contact
+        ul.nav.nav-pills.float-right
+          li.nav-item: a.nav-link.active(href='#') Home
+          li.nav-item: a.nav-link(href='#') About
+          li.nav-item: a.nav-link(href='#') Contact
 
         h3.text-muted webapp
 
@@ -211,27 +176,9 @@ html.no-js(lang='')
       ga('create','UA-XXXXX-X');ga('send','pageview');
 
     // build:js scripts/vendor.js
-    // bower:js
-    script(src='/bower_components/jquery/dist/jquery.js')
-    script(src='/bower_components/modernizr/modernizr.js')
-    // endbower
+    <script type="text/javascript" src="/node_modules/jquery/dist/jquery.min.js"></script>
+    <script type="text/javascript" src="/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
     // endbuild
-
-    // build:js scripts/plugins.js
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/affix.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/alert.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/dropdown.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/tooltip.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/modal.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/transition.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/button.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/popover.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/carousel.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/scrollspy.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/collapse.js')
-    script(src='/bower_components/bootstrap-sass/assets/javascripts/bootstrap/tab.js')
-    // endbuild
-
     // build:js scripts/main.js
     script(src='scripts/main.js')
     // endbuild
@@ -244,7 +191,7 @@ extends layouts/default
 
 block content
   .jumbotron
-    h1 'Allo, 'Allo!
+    h1.display-3 'Allo, 'Allo!
     p.lead Always a pleasure scaffolding your apps.
     p: a.btn.btn-lg.btn-success(href='#') Splendid!
 
@@ -256,8 +203,8 @@ block content
       h4 Sass
       p Sass is the most mature, stable, and powerful professional grade CSS extension language in the world.
 
-      h4 Bootstrap
-      p Sleek, intuitive, and powerful mobile first front-end framework for faster and easier web development.
+      <h4>Bootstrap</h4>
+      <p>Sleek, intuitive, and powerful mobile first front-end framework for faster and easier web development.</p>
 
       h4 Modernizr
       p Modernizr is an open-source JavaScript library that helps you build the next generation of HTML5 and CSS3-powered websites.

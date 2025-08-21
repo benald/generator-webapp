@@ -19,27 +19,27 @@ $ yo webapp
 To start developing, run:
 
 ```sh
-$ gulp serve
+$ npm run start
 ```
 
-This will fire up a local web server, open http://localhost:9000 in your default browser and watch files for changes, reloading the browser automatically via [LiveReload].
+This will fire up a local web server, open http://localhost:9000 in your default browser and watch files for changes, reloading the browser automatically.
 
 To run the tests in the browser, run:
 
 ```sh
-$ gulp serve:test
+$ npm run serve:test
 ```
 
 To make a production-ready build of the app, run:
 
 ```sh
-$ gulp
+$ npm run build
 ```
 
 To preview the production-ready build to check if everything is ok:
 
 ```sh
-$ gulp serve:dist
+$ npm run serve:dist
 ```
 
 ## Tasks
@@ -47,20 +47,28 @@ $ gulp serve:dist
 To get the list of available tasks, run:
 
 ```sh
-$ gulp --tasks
+$ npm run tasks
 ```
 
 ## Gulp plugins
 
-Gulp plugins (the ones that begin with `gulp-`) don't have to be `require()`'d. They are automatically picked up by [gulp-load-plugins][plugins] and available through the `$` variable.
+Gulp plugins (the ones that begin with `gulp-`) don't have to be explicitly imported. They are automatically picked up by [gulp-load-plugins] and available through the `$` variable.
+
+## Browser support
+
+You can configure browser support for Autoprefixer and @babel/preset-env by modifying the [browserslist] configuration, which in this case is the `browserslist` field in your `package.json`.
+
+### Modernizr
+
+`modernizr.json` contains Modernizr configuration. You can use [this file][modernizr-config-all] as a reference for all available options.
 
 ## Linting
 
-We use ESLint for linting JavaScript code. You can define rules in your `package.json` under the `"eslint"` field. Alternatively, you can add an `.eslintrc` file to your project root, where you can [configure][eslint-config] ESLint using JavaScript, JSON or YAML.
+We use ESLint for linting JavaScript code. You can define rules in your `package.json` under the `eslintConfig` field. Alternatively, you can add an `.eslintrc` file to your project root, where you can [configure][eslint-config] ESLint using JavaScript, JSON or YAML.
 
 ### The `no-undef` rule and tests
 
-The ESLint rule [`no-undef`] will warn about usage of explicitly undeclared variables and functions. Because our tests use global functions like `describe` and `it` (defined by the testing framework), ESLint will consider those as warnings.
+The ESLint rule [`no-undef`][no-undef] will warn about usage of explicitly undeclared variables and functions. Because our tests use global functions like `describe` and `it` (defined by the testing framework), ESLint will consider those as warnings.
 
 Luckily, the fix is easy—add an `.eslintrc` file to the `test/spec` directory and let ESLint know about your testing framework. For example, if you're using Mocha, add this to `.eslintrc`:
 
@@ -99,7 +107,7 @@ A common practice is to have a single, "main", Sass file, then use `@import` sta
 
 Our build step uses special `build` comment blocks to mark which assets to concatenate and compress for production. You can see them at the top and bottom of `app/index.html`.
 
-You don't have to worry about new Bower components, their JS files will be automatically injected in your `app/index.html`, but you have to add your own JS files manually. For example, let's say you created `app/scripts/nav.js`, defining some special behavior for the navigation. You should then include it in the comment blocks for your _source_ JS files, where `app/scripts/main.js` is located:
+You have to add your own JS files manually. For example, let's say you created `app/scripts/nav.js`, defining some special behavior for the navigation. You should then include it in the comment blocks for your _source_ JS files, where `app/scripts/main.js` is located:
 
 ```html
 <!-- build:js scripts/main.js -->
@@ -112,34 +120,33 @@ Upon build these will be concatenated and compressed into a single file `scripts
 
 The file name in the comment block and the first source aren't related, their name being the same is a pure coincidence. The file name in the comment block specifies how the final optimized file will be called, while the sources should map to your source files.
 
-## Bower
+## Debugging `gulpfile.js`
 
-We keep `bower_components` in the project root, you can read details about that [here](bower.md). Installing Bower components is usually as easy as:
+Gulp tasks are not meant to be run directly, but instead through npm scripts. However, sometimes you want to run a tasks in order to debug it. If you don't have Gulp install globally, you can run the local CLI using `npx gulp`, so this is how you would run the `lint` task:
 
 ```sh
-$ bower install --save jquery
+$ npx gulp lint
 ```
 
-Behind the scenes [wiredep] will automatically inject assets from your Bower components to your HTML/SCSS files as soon as you run `gulp serve` or `gulp`. If `gulp serve` was already running while installing the components, the injection will happen immediately.
+Keep in mind that only exported tasks are available to the CLI:
 
-However, in some situations you'll have to do some extra work:
+```js
+function myPrivateTask() {
+  // not available to CLI
+}
 
-### 1. There are images/fonts in the component
+function myPublicTask() {
+}
 
-These are a bit tricky, as they can't be automatically injected. Ideally you would want to put them in a place where the link would work both in development and in production, like we do with Bootstrap, but that's sometimes not possible. In those cases you would need to do some [gulp-replace][replace] trickery.
-
-### 2. Field values in the component's `bower.json` are incorrect or missing
-
-If there's a problem, it's usually with the `main` field, which wiredep uses to wire up assets. Fortunately you can always [override][override] these fields and send a pull request to that component's repository, fixing their `bower.json` :wink:
+// available to CLI as "myPublicTask"
+exports.myPublicTask = myPublicTask
+```
 
 [gulp]: https://github.com/gulpjs/gulp
-[gulp-docs]: https://github.com/gulpjs/gulp/blob/master/docs/README.md
+[gulp-docs]: https://gulpjs.com/docs/en/getting-started/quick-start
 [yo]: https://github.com/yeoman/yo
-[LiveReload]: https://github.com/intesso/connect-livereload
-[plugins]: https://github.com/jackfranklin/gulp-load-plugins
-[eslint-config]: http://eslint.org/docs/user-guide/configuring
-[`no-undef`]: http://eslint.org/docs/rules/no-undef
-[calc]: https://github.com/postcss/postcss-calc
-[wiredep]: https://github.com/taptapship/wiredep
-[replace]: https://github.com/lazd/gulp-replace
-[override]: https://github.com/taptapship/wiredep#bower-overrides
+[gulp-load-plugins]: https://github.com/jackfranklin/gulp-load-plugins
+[browserslist]: https://github.com/browserslist/browserslist
+[modernizr-config-all]: https://github.com/Modernizr/Modernizr/blob/master/lib/config-all.json
+[eslint-config]: https://eslint.org/docs/user-guide/configuring
+[no-undef]: https://eslint.org/docs/rules/no-undef

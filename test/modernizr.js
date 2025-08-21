@@ -2,24 +2,25 @@ const path = require('path');
 const helpers = require('yeoman-test');
 const assert = require('yeoman-assert');
 
-describe('jQuery feature', () => {
+describe('Modernizr feature', () => {
   describe('on', () => {
     before(done => {
       helpers
         .run(path.join(__dirname, '../app'))
-        .withPrompts({
-          features: [],
-          includeJQuery: true
-        })
+        .withPrompts({ features: ['includeModernizr'] })
         .on('end', done);
     });
 
-    it('should add the correct dependencies', () => {
-      assert.fileContent('package.json', '"jquery": "');
+    it('should add the correct files', () => {
+      assert.file('modernizr.json');
     });
 
-    it('should enable jQuery environment in ESLint', () => {
-      assert.fileContent('package.json', '"jquery": true');
+    it('should add the correct dependencies', () => {
+      assert.fileContent('package.json', '"modernizr"');
+    });
+
+    it('should add the correct gulp task', () => {
+      assert.fileContent('gulpfile.js', 'function modernizr');
     });
   });
 
@@ -29,13 +30,14 @@ describe('jQuery feature', () => {
         .run(path.join(__dirname, '../app'))
         .withPrompts({
           features: [],
-          includeJQuery: false
+          includeModernizr: false
         })
         .on('end', done);
     });
 
-    it('should not contain jQuery', () => {
-      assert.noFileContent('package.json', 'jquery');
+    it('should not contain Modernizr anywhere', () => {
+      assert.noFileContent('package.json', 'modernizr');
+      assert.noFile('modernizr.json');
     });
   });
 });

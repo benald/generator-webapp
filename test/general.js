@@ -1,14 +1,15 @@
 const path = require('path');
 const helpers = require('yeoman-test');
 const assert = require('yeoman-assert');
+const babel = require('@babel/core');
+const fs = require('fs');
 
 describe('general', () => {
   before(done => {
-    helpers.run(path.join(__dirname, '../app'))
-      .withPrompts({features: []})
-      .withGenerators([
-        [helpers.createDummyGenerator(), 'mocha:app']
-      ])
+    helpers
+      .run(path.join(__dirname, '../app'))
+      .withPrompts({ features: [] })
+      .withGenerators([[helpers.createDummyGenerator(), 'mocha:app']])
       .on('end', done);
   });
 
@@ -19,12 +20,10 @@ describe('general', () => {
 
   it('creates expected files', () => {
     assert.file([
-      'bower.json',
       'package.json',
       'gulpfile.js',
       '.babelrc',
       '.editorconfig',
-      '.bowerrc',
       '.gitignore',
       '.gitattributes',
       'app/favicon.ico',
@@ -37,5 +36,20 @@ describe('general', () => {
       'app/fonts',
       'test'
     ]);
+  });
+
+  it('creates expected npm scripts', () => {
+    assert.fileContent('package.json', '"serve:test"');
+    assert.fileContent('package.json', '"serve:dist"');
+    assert.fileContent('package.json', '"start"');
+    assert.fileContent('package.json', '"build"');
+    assert.fileContent('package.json', '"test"');
+    assert.fileContent('package.json', '"tasks"');
+  });
+
+  it('produces a valid gulpfile', () => {
+    const filePath = path.resolve('gulpfile.js');
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    babel.parse(fileContent);
   });
 });
